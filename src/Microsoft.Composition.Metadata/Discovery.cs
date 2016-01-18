@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection.PortableExecutable;
 using System.Threading.Tasks;
+using System.Reflection.Metadata;
 
 namespace Microsoft.Composition.Metadata
 {

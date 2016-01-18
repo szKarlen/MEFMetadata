@@ -14,10 +14,10 @@ namespace Microsoft.Composition.Metadata
         private string assemblyFilePath;
         private string fullAssemblyName;
 
-        private Dictionary<TypeHandle, TypeInfo> compositionTypes = new Dictionary<TypeHandle, TypeInfo>();
-        private Dictionary<FieldHandle, MemberInfo> fields;
-        private Dictionary<PropertyHandle, MemberInfo> properties;
-        private Dictionary<MethodHandle, MemberInfo> methods;
+        private Dictionary<TypeDefinitionHandle, TypeInfo> compositionTypes = new Dictionary<TypeDefinitionHandle, TypeInfo>();
+        private Dictionary<FieldDefinitionHandle, MemberInfo> fields;
+        private Dictionary<PropertyDefinitionHandle, MemberInfo> properties;
+        private Dictionary<MethodDefinitionHandle, MemberInfo> methods;
 
         private readonly Dictionary<Handle, bool> isImportAttributeCache = new Dictionary<Handle, bool>();
         private readonly Dictionary<Handle, ExportOrInheritedExport> isExportAttributeCache = new Dictionary<Handle, ExportOrInheritedExport>();
@@ -123,23 +123,23 @@ namespace Microsoft.Composition.Metadata
                 }
             }
 
-            foreach (var typeHandle in metadataReader.TypeDefinitions)
+            foreach (var TypeDefinitionHandle in metadataReader.TypeDefinitions)
             {
-                var typeDefinition = metadataReader.GetTypeDefinition(typeHandle);
+                var typeDefinition = metadataReader.GetTypeDefinition(TypeDefinitionHandle);
                 Walk(typeDefinition);
             }
 
             foreach (var customAttributeHandle in metadataReader.CustomAttributes)
             {
                 var customAttribute = metadataReader.GetCustomAttribute(customAttributeHandle);
-                var attributeTypeHandle = metadataReader.GetAttributeTypeHandle(customAttribute);
+                var attributeTypeDefinitionHandle = metadataReader.GetAttributeTypeDefinitionHandle(customAttribute);
 
-                if (TryHandleImportAttribute(customAttribute, attributeTypeHandle))
+                if (TryHandleImportAttribute(customAttribute, attributeTypeDefinitionHandle))
                 {
                     continue;
                 }
 
-                if (TryHandleExportAttribute(customAttribute, attributeTypeHandle))
+                if (TryHandleExportAttribute(customAttribute, attributeTypeDefinitionHandle))
                 {
                     continue;
                 }
@@ -148,54 +148,54 @@ namespace Microsoft.Composition.Metadata
 
         private void Walk(TypeDefinition typeDefinition)
         {
-            var baseTypeHandle = typeDefinition.BaseType;
-            if (baseTypeHandle.IsNil)
+            var baseTypeDefinitionHandle = typeDefinition.BaseType;
+            if (baseTypeDefinitionHandle.IsNil)
             {
                 return;
             }
 
-            var handleType = baseTypeHandle.HandleType;
-            if (handleType == HandleType.Type)
+            var Kind = baseTypeDefinitionHandle.Kind;
+            if (Kind == HandleKind.TypeDefinition)
             {
-                typeDefinition = metadataReader.GetTypeDefinition((TypeHandle)baseTypeHandle);
+                typeDefinition = metadataReader.GetTypeDefinition((TypeDefinitionHandle)baseTypeDefinitionHandle);
                 var typeFullName = metadataReader.GetFullTypeName(typeDefinition);
                 if (knownExportAttributeOrDerivedType.Contains(typeFullName))
                 {
                     typeFullName = metadataReader.GetFullTypeName(typeDefinition);
                     knownExportAttributeOrDerivedType.Add(typeFullName);
-                    //isExportAttributeCache[baseTypeHandle] = ExportOrInheritedExport.Export;
+                    //isExportAttributeCache[baseTypeDefinitionHandle] = ExportOrInheritedExport.Export;
                     return;
                 }
                 else if (knownImportAttributeOrDerivedType.Contains(typeFullName))
                 {
                     typeFullName = metadataReader.GetFullTypeName(typeDefinition);
                     knownImportAttributeOrDerivedType.Add(typeFullName);
-                    //isImportAttributeCache[baseTypeHandle] = true;
+                    //isImportAttributeCache[baseTypeDefinitionHandle] = true;
                     return;
                 }
 
                 Walk(typeDefinition);
             }
-            else if (handleType == HandleType.TypeReference)
+            else if (Kind == HandleKind.TypeDefinition)
             {
-                TypeReference typeReference = metadataReader.GetTypeReference((TypeReferenceHandle)baseTypeHandle);
+                TypeReference typeReference = metadataReader.GetTypeReference((TypeReferenceHandle)baseTypeDefinitionHandle);
                 var typeFullName = metadataReader.GetFullTypeName(typeReference);
                 if (knownExportAttributeOrDerivedType.Contains(typeFullName))
                 {
                     typeFullName = metadataReader.GetFullTypeName(typeDefinition);
                     knownExportAttributeOrDerivedType.Add(typeFullName);
-                    //isExportAttributeCache[baseTypeHandle] = ExportOrInheritedExport.Export;
+                    //isExportAttributeCache[baseTypeDefinitionHandle] = ExportOrInheritedExport.Export;
                     return;
                 }
                 else if (knownImportAttributeOrDerivedType.Contains(typeFullName))
                 {
                     typeFullName = metadataReader.GetFullTypeName(typeDefinition);
                     knownImportAttributeOrDerivedType.Add(typeFullName);
-                    //isImportAttributeCache[baseTypeHandle] = true;
+                    //isImportAttributeCache[baseTypeDefinitionHandle] = true;
                     return;
                 }
             }
-            else if (handleType == HandleType.TypeSpecification)
+            else if (Kind == HandleKind.TypeDefinition)
             {
                 // TODO: not implemented
             }
@@ -205,59 +205,59 @@ namespace Microsoft.Composition.Metadata
             }
         }
 
-        private bool IsImportAttribute(Handle attributeTypeHandle)
+        private bool IsImportAttribute(Handle attributeTypeDefinitionHandle)
         {
             bool isImport = false;
 
-            if (isImportAttributeCache.TryGetValue(attributeTypeHandle, out isImport))
+            if (isImportAttributeCache.TryGetValue(attributeTypeDefinitionHandle, out isImport))
             {
                 return isImport;
             }
 
-            isImport = IsImportOrImportManyAttribute(attributeTypeHandle);
-            isImportAttributeCache[attributeTypeHandle] = isImport;
+            isImport = IsImportOrImportManyAttribute(attributeTypeDefinitionHandle);
+            isImportAttributeCache[attributeTypeDefinitionHandle] = isImport;
             return isImport;
         }
 
-        private bool IsExportAttribute(Handle attributeTypeHandle, out bool isInheritedExport)
+        private bool IsExportAttribute(Handle attributeTypeDefinitionHandle, out bool isInheritedExport)
         {
             ExportOrInheritedExport exportOrInheritedExport;
 
-            if (!isExportAttributeCache.TryGetValue(attributeTypeHandle, out exportOrInheritedExport))
+            if (!isExportAttributeCache.TryGetValue(attributeTypeDefinitionHandle, out exportOrInheritedExport))
             {
-                exportOrInheritedExport = IsExportOrInheritedExportAttribute(attributeTypeHandle);
-                isExportAttributeCache.Add(attributeTypeHandle, exportOrInheritedExport);
+                exportOrInheritedExport = IsExportOrInheritedExportAttribute(attributeTypeDefinitionHandle);
+                isExportAttributeCache.Add(attributeTypeDefinitionHandle, exportOrInheritedExport);
             }
 
             isInheritedExport = exportOrInheritedExport == ExportOrInheritedExport.InheritedExport;
             return exportOrInheritedExport != ExportOrInheritedExport.None;
         }
 
-        private bool TryHandleImportAttribute(CustomAttribute customAttribute, Handle attributeTypeHandle)
+        private bool TryHandleImportAttribute(CustomAttribute customAttribute, Handle attributeTypeDefinitionHandle)
         {
-            bool isImport = IsImportAttribute(attributeTypeHandle);
+            bool isImport = IsImportAttribute(attributeTypeDefinitionHandle);
             if (!isImport)
             {
                 return false;
             }
 
             var parent = customAttribute.Parent;
-            switch (parent.HandleType)
+            switch (parent.Kind)
             {
-                case HandleType.Property:
-                    MemberInfo propertyInfo = GetOrAddPropertyInfo((PropertyHandle)parent);
+                case HandleKind.PropertyDefinition:
+                    MemberInfo propertyInfo = GetOrAddPropertyInfo((PropertyDefinitionHandle)parent);
                     this.AddImportedMember(propertyInfo);
                     break;
-                case HandleType.Field:
-                    MemberInfo fieldInfo = GetOrAddFieldInfo((FieldHandle)parent);
+                case HandleKind.FieldDefinition:
+                    MemberInfo fieldInfo = GetOrAddFieldInfo((FieldDefinitionHandle)parent);
                     this.AddImportedMember(fieldInfo);
                     break;
-                case HandleType.Parameter:
+                case HandleKind.Parameter:
                     // ignore Import attributes on parameters of importing constructors
                     break;
-                case HandleType.Method:
-                case HandleType.MethodImplementation:
-                case HandleType.MethodSpecification:
+                case HandleKind.MethodDefinition:
+                case HandleKind.MethodImplementation:
+                case HandleKind.MethodSpecification:
                 default:
                     throw new NotImplementedException();
             }
@@ -265,24 +265,24 @@ namespace Microsoft.Composition.Metadata
             return true;
         }
 
-        private bool TryHandleExportAttribute(CustomAttribute customAttribute, Handle attributeTypeHandle)
+        private bool TryHandleExportAttribute(CustomAttribute customAttribute, Handle attributeTypeDefinitionHandle)
         {
             bool isInheritedExport = false;
-            bool isExport = IsExportAttribute(attributeTypeHandle, out isInheritedExport);
+            bool isExport = IsExportAttribute(attributeTypeDefinitionHandle, out isInheritedExport);
             if (!isExport)
             {
                 return false;
             }
 
             var parent = customAttribute.Parent;
-            switch (parent.HandleType)
+            switch (parent.Kind)
             {
-                case HandleType.Type:
-                    var typeHandle = (TypeHandle)parent;
-                    TypeInfo exportedTypeInfo = GetOrCreateTypeInfo(typeHandle);
+                case HandleKind.TypeDefinition:
+                    var TypeDefinitionHandle = (TypeDefinitionHandle)parent;
+                    TypeInfo exportedTypeInfo = GetOrCreateTypeInfo(TypeDefinitionHandle);
                     if (isInheritedExport)
                     {
-                        //this.inheritedExportTypes.Add(typeHandle, true);
+                        //this.inheritedExportTypes.Add(TypeDefinitionHandle, true);
                         //this.inheritedExportTypesByName.Add(exportedTypeInfo.FullName);
                         //this.hasInheritedExports = true;
                     }
@@ -292,16 +292,16 @@ namespace Microsoft.Composition.Metadata
                     }
 
                     break;
-                case HandleType.Property:
-                    MemberInfo propertyInfo = GetOrAddPropertyInfo((PropertyHandle)parent);
+                case HandleKind.PropertyDefinition:
+                    MemberInfo propertyInfo = GetOrAddPropertyInfo((PropertyDefinitionHandle)parent);
                     this.AddExportedMember(propertyInfo);
                     break;
-                case HandleType.Method:
-                    MemberInfo methodInfo = GetOrAddMethodInfo((MethodHandle)parent);
+                case HandleKind.MethodDefinition:
+                    MemberInfo methodInfo = GetOrAddMethodInfo((MethodDefinitionHandle)parent);
                     this.AddExportedMember(methodInfo);
                     break;
-                case HandleType.Field:
-                    MemberInfo exportedFieldInfo = GetOrAddFieldInfo((FieldHandle)parent);
+                case HandleKind.FieldDefinition:
+                    MemberInfo exportedFieldInfo = GetOrAddFieldInfo((FieldDefinitionHandle)parent);
                     this.AddExportedMember(exportedFieldInfo);
                     break;
                 default:
@@ -311,44 +311,44 @@ namespace Microsoft.Composition.Metadata
             return true;
         }
 
-        private TypeInfo GetOrCreateTypeInfo(TypeHandle typeHandle)
+        private TypeInfo GetOrCreateTypeInfo(TypeDefinitionHandle TypeDefinitionHandle)
         {
             TypeInfo typeInfo = null;
-            if (this.compositionTypes.TryGetValue(typeHandle, out typeInfo))
+            if (this.compositionTypes.TryGetValue(TypeDefinitionHandle, out typeInfo))
             {
                 return typeInfo;
             }
 
             typeInfo = new TypeInfo(isExported: false);
-            typeInfo.MetadataToken = MetadataTokens.GetToken(metadataReader, typeHandle);
+            typeInfo.MetadataToken = MetadataTokens.GetToken(metadataReader, TypeDefinitionHandle);
 
-            this.compositionTypes.Add(typeHandle, typeInfo);
+            this.compositionTypes.Add(TypeDefinitionHandle, typeInfo);
             return typeInfo;
         }
 
-        private MemberInfo GetOrAddPropertyInfo(PropertyHandle handle)
+        private MemberInfo GetOrAddPropertyInfo(PropertyDefinitionHandle handle)
         {
             if (this.properties == null)
             {
-                properties = new Dictionary<PropertyHandle, MemberInfo>();
+                properties = new Dictionary<PropertyDefinitionHandle, MemberInfo>();
             }
 
             MemberInfo result = null;
             if (!properties.TryGetValue(handle, out result))
             {
-                var property = metadataReader.GetProperty(handle);
-                var propertyMethodHandles = property.GetAssociatedMethods();
-                TypeHandle declaringTypeHandle;
-                MethodHandle accessorMethod = propertyMethodHandles.Getter;
+                var property = metadataReader.GetPropertyDefinition(handle);
+                var propertyMethodDefinitionHandles = property.GetAccessors();
+                TypeDefinitionHandle declaringTypeDefinitionHandle;
+                MethodDefinitionHandle accessorMethod = propertyMethodDefinitionHandles.Getter;
                 if (accessorMethod.IsNil)
                 {
-                    accessorMethod = propertyMethodHandles.Setter;
+                    accessorMethod = propertyMethodDefinitionHandles.Setter;
                 }
 
-                declaringTypeHandle = metadataReader.GetDeclaringType(accessorMethod);
+                declaringTypeDefinitionHandle = metadataReader.GetMethodDefinition(accessorMethod).GetDeclaringType();
                 result = new MemberInfo(MemberKind.Property);
                 result.Token = this.metadataReader.GetToken(handle);
-                result.DeclaringTypeHandle = declaringTypeHandle;
+                result.DeclaringTypeDefinitionHandle = declaringTypeDefinitionHandle;
                 result.Handle = handle;
                 properties.Add(handle, result);
             }
@@ -356,21 +356,21 @@ namespace Microsoft.Composition.Metadata
             return result;
         }
 
-        private MemberInfo GetOrAddFieldInfo(FieldHandle handle)
+        private MemberInfo GetOrAddFieldInfo(FieldDefinitionHandle handle)
         {
             if (this.fields == null)
             {
-                this.fields = new Dictionary<FieldHandle, MemberInfo>();
+                this.fields = new Dictionary<FieldDefinitionHandle, MemberInfo>();
             }
 
             MemberInfo result = null;
             if (!fields.TryGetValue(handle, out result))
             {
                 result = new MemberInfo(MemberKind.Field);
-                var field = metadataReader.GetField(handle);
+                var field = metadataReader.GetFieldDefinition(handle);
                 result.Token = metadataReader.GetToken(handle);
-                result.DeclaringTypeHandle = metadataReader.GetDeclaringType(handle);
-                if (result.DeclaringTypeHandle.IsNil)
+                result.DeclaringTypeDefinitionHandle = field.GetDeclaringType();
+                if (result.DeclaringTypeDefinitionHandle.IsNil)
                 {
                     throw null;
                 }
@@ -382,20 +382,20 @@ namespace Microsoft.Composition.Metadata
             return result;
         }
 
-        private MemberInfo GetOrAddMethodInfo(MethodHandle handle)
+        private MemberInfo GetOrAddMethodInfo(MethodDefinitionHandle handle)
         {
             if (this.methods == null)
             {
-                this.methods = new Dictionary<MethodHandle, MemberInfo>();
+                this.methods = new Dictionary<MethodDefinitionHandle, MemberInfo>();
             }
 
             MemberInfo result = null;
             if (!methods.TryGetValue(handle, out result))
             {
-                var method = metadataReader.GetMethod(handle);
+                var method = metadataReader.GetMethodDefinition(handle);
                 result = new MemberInfo(MemberKind.Method);
                 result.Token = this.metadataReader.GetToken(handle);
-                result.DeclaringTypeHandle = metadataReader.GetDeclaringType(handle);
+                result.DeclaringTypeDefinitionHandle = method.GetDeclaringType();
                 result.Handle = handle;
                 methods[handle] = result;
             }
@@ -405,19 +405,19 @@ namespace Microsoft.Composition.Metadata
 
         private void AddImportedMember(MemberInfo memberInfo)
         {
-            var type = GetOrCreateTypeInfo(memberInfo.DeclaringTypeHandle);
+            var type = GetOrCreateTypeInfo(memberInfo.DeclaringTypeDefinitionHandle);
             type.AddImportedMember(memberInfo);
         }
 
         private void AddExportedMember(MemberInfo memberInfo)
         {
-            var type = GetOrCreateTypeInfo(memberInfo.DeclaringTypeHandle);
+            var type = GetOrCreateTypeInfo(memberInfo.DeclaringTypeDefinitionHandle);
             type.AddExportedMember(memberInfo);
         }
 
-        public ExportOrInheritedExport IsExportOrInheritedExportAttribute(Handle attributeTypeHandle)
+        public ExportOrInheritedExport IsExportOrInheritedExportAttribute(Handle attributeTypeDefinitionHandle)
         {
-            var typeFullName = metadataReader.GetFullTypeName(attributeTypeHandle);
+            var typeFullName = metadataReader.GetFullTypeName(attributeTypeDefinitionHandle);
             if (knownExportAttributeOrDerivedType.Contains(typeFullName))
             {
                 return ExportOrInheritedExport.Export;
@@ -426,9 +426,9 @@ namespace Microsoft.Composition.Metadata
             return ExportOrInheritedExport.None;
         }
 
-        public bool IsImportOrImportManyAttribute(Handle attributeTypeHandle)
+        public bool IsImportOrImportManyAttribute(Handle attributeTypeDefinitionHandle)
         {
-            var typeFullName = metadataReader.GetFullTypeName(attributeTypeHandle);
+            var typeFullName = metadataReader.GetFullTypeName(attributeTypeDefinitionHandle);
             if (knownImportAttributeOrDerivedType.Contains(typeFullName))
             {
                 return true;

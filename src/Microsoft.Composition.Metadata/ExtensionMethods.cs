@@ -10,11 +10,11 @@ namespace Microsoft.Composition.Metadata
     {
         public static string GetFullTypeName(this MetadataReader metadataReader, Handle handle)
         {
-            if (handle.HandleType == HandleType.Type)
+            if (handle.Kind == HandleKind.TypeDefinition)
             {
-                return GetFullTypeName(metadataReader, (TypeHandle)handle);
+                return GetFullTypeName(metadataReader, (TypeDefinitionHandle)handle);
             }
-            else if (handle.HandleType == HandleType.TypeReference)
+            else if (handle.Kind == HandleKind.TypeReference)
             {
                 return GetFullTypeName(metadataReader, (TypeReferenceHandle)handle);
             }
@@ -30,9 +30,9 @@ namespace Microsoft.Composition.Metadata
             return GetFullTypeName(metadataReader, typeReference);
         }
 
-        public static string GetFullTypeName(this MetadataReader metadataReader, TypeHandle typeHandle)
+        public static string GetFullTypeName(this MetadataReader metadataReader, TypeDefinitionHandle TypeDefinitionHandle)
         {
-            var typeDefinition = metadataReader.GetTypeDefinition(typeHandle);
+            var typeDefinition = metadataReader.GetTypeDefinition(TypeDefinitionHandle);
             return metadataReader.GetFullTypeName(typeDefinition);
         }
 
@@ -75,7 +75,7 @@ namespace Microsoft.Composition.Metadata
             }
 
             var version = assemblyDefinition.Version;
-            var publicKeyBytes = metadataReader.GetBytes(assemblyDefinition.PublicKey);
+            var publicKeyBytes = metadataReader.GetBlobBytes(assemblyDefinition.PublicKey);
             byte[] publicKeyTokenBytes = publicKeyBytes;
             string publicKeyToken = "null";
             if (publicKeyBytes.Length > 0)
@@ -103,7 +103,7 @@ namespace Microsoft.Composition.Metadata
             }
 
             var version = assemblyReference.Version;
-            var publicKeyTokenBytes = metadataReader.GetBytes(assemblyReference.PublicKeyOrToken);
+            var publicKeyTokenBytes = metadataReader.GetBlobBytes(assemblyReference.PublicKeyOrToken);
             var publicKeyToken = Conversion.ByteArrayToHexString(publicKeyTokenBytes);
             publicKeyToken = string.IsNullOrEmpty(publicKeyToken) ? "null" : publicKeyToken;
 
@@ -159,24 +159,24 @@ namespace Microsoft.Composition.Metadata
             return result;
         }
 
-        public static Handle GetAttributeTypeHandle(this MetadataReader metadataReader, CustomAttribute customAttribute)
+        public static Handle GetAttributeTypeDefinitionHandle(this MetadataReader metadataReader, CustomAttribute customAttribute)
         {
-            Handle attributeTypeHandle;
+            Handle attributeTypeDefinitionHandle;
             var ctor = customAttribute.Constructor;
-            if (ctor.HandleType == HandleType.MemberReference)
+            if (ctor.Kind == HandleKind.MemberReference)
             {
                 var memberReferenceHandle = (MemberReferenceHandle)ctor;
                 var memberReference = metadataReader.GetMemberReference(memberReferenceHandle);
-                attributeTypeHandle = memberReference.Parent;
+                attributeTypeDefinitionHandle = memberReference.Parent;
             }
             else
             {
-                MethodHandle methodHandle = (MethodHandle)ctor;
-                var method = metadataReader.GetMethod(methodHandle);
-                attributeTypeHandle = metadataReader.GetDeclaringType(methodHandle);
+                MethodDefinitionHandle MethodDefinitionHandle = (MethodDefinitionHandle)ctor;
+                var method = metadataReader.GetMethodDefinition(MethodDefinitionHandle);
+                attributeTypeDefinitionHandle = method.GetDeclaringType();
             }
 
-            return attributeTypeHandle;
+            return attributeTypeDefinitionHandle;
         }
     }
 }

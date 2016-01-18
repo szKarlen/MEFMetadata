@@ -9,7 +9,7 @@ namespace Microsoft.Composition.Metadata
             this.Kind = kind;
         }
 
-        public TypeHandle DeclaringTypeHandle { get; set; }
+        public TypeDefinitionHandle DeclaringTypeDefinitionHandle { get; set; }
         public Handle Handle { get; internal set; }
         public int Token { get; internal set; }
         public TypeInfo Type { get; internal set; }
