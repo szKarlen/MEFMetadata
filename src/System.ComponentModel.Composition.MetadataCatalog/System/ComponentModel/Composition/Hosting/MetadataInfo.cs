@@ -66,9 +66,9 @@ namespace System.ComponentModel.Composition.Hosting
             }
         }
 
-        public async Task Realize()
+        public Task Realize()
         {
-            await assemblyCatalogInfo.ConfigureAwait(false);
+            return assemblyCatalogInfo;
         }
 
         private void InitializeTypeInfoMap()

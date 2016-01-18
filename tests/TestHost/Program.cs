@@ -33,8 +33,11 @@ namespace TestHost
 
             using (Timing("Everything"))
             {
-                LoadAssemblies();
-                new Program().Compose();
+                Task.Run(async () =>
+                {
+                    LoadAssemblies();
+                    await new Program().Compose();
+                }).Wait();
             }
         }
 
@@ -130,7 +133,7 @@ namespace TestHost
             File.AppendAllText("E:\\elapsed.txt", elapsed + Environment.NewLine);
         }
 
-        private void Compose()
+        private async Task Compose()
         {
             string[] componentAssemblyFiles = GetAssemblies();
 
@@ -143,7 +146,7 @@ namespace TestHost
 #if false
                 CompositionDumper.TimeComposition(catalogs, "E:\\2.txt");
 #else
-                CompositionDumper.TimeComposition(catalogs);
+                await CompositionDumper.TimeComposition(catalogs);
 #endif
             }
         }

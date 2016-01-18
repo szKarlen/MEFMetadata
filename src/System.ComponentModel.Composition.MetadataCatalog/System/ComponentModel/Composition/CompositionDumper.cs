@@ -36,9 +36,9 @@ namespace System.ComponentModel.Composition
             }
         }
 
-        public static async void TouchContainer(CompositionContainer container)
+        public static Task TouchContainer(CompositionContainer container)
         {
-            await TouchCatalog(container.Catalog).ConfigureAwait(false);
+            return TouchCatalog(container.Catalog);
         }
 
         public static async Task TouchCatalog(ComposablePartCatalog composablePartCatalog)
@@ -104,7 +104,7 @@ namespace System.ComponentModel.Composition
             }
         }
 
-        public static string TimeComposition(IEnumerable<ComposablePartCatalog> catalogs, string outputFilePath = null)
+        public static async Task<string> TimeComposition(IEnumerable<ComposablePartCatalog> catalogs, string outputFilePath = null)
         {
             var sw = Stopwatch.StartNew();
 
@@ -122,7 +122,7 @@ namespace System.ComponentModel.Composition
             var batch = new CompositionBatch();
             container.Compose(batch);
 
-            TouchContainer(container);
+            await TouchContainer(container);
 
             var elapsed = sw.Elapsed.ToString(@"s\.fff") + Environment.NewLine;
 
